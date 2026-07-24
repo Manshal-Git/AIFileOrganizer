@@ -7,6 +7,7 @@ sealed interface OrganizerAction {
     data object OnToggleMode : OrganizerAction
     data object OnRescanClick : OrganizerAction
     data object OnToggleViewMode : OrganizerAction
+    data class OnSetViewMode(val viewMode: FileViewMode) : OrganizerAction
     data class OnToggleGroupCollapsed(val type: FileType) : OrganizerAction
     data class OnApplyRename(val fileId: String) : OrganizerAction
     data object OnApplyAll : OrganizerAction

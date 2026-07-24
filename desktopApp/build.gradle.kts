@@ -14,6 +14,8 @@ dependencies {
 
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.koin.core)
+    implementation(libs.koin.compose.viewmodel)
+    implementation(libs.androidx.lifecycle.runtimeCompose)
 }
 
 compose.desktop {

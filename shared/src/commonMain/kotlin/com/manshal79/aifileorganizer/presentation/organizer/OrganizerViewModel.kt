@@ -30,6 +30,7 @@ class OrganizerViewModel(
             OrganizerAction.OnToggleMode -> toggleMode()
             OrganizerAction.OnRescanClick -> rescan()
             OrganizerAction.OnToggleViewMode -> toggleViewMode()
+            is OrganizerAction.OnSetViewMode -> setViewMode(action.viewMode)
             is OrganizerAction.OnToggleGroupCollapsed -> toggleGroupCollapsed(action.type)
             is OrganizerAction.OnApplyRename -> applyRename(action.fileId)
             OrganizerAction.OnApplyAll -> applyAll()
@@ -59,6 +60,10 @@ class OrganizerViewModel(
             val nextViewMode = if (it.viewMode == FileViewMode.LIST) FileViewMode.GRID else FileViewMode.LIST
             it.copy(viewMode = nextViewMode)
         }
+    }
+
+    private fun setViewMode(viewMode: FileViewMode) {
+        _state.update { it.copy(viewMode = viewMode) }
     }
 
     private fun toggleGroupCollapsed(type: FileType) {
