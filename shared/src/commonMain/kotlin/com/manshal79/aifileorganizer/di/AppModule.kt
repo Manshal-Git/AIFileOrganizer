@@ -19,6 +19,7 @@ private val ollamaModel = LLModel(
         LLMCapability.Temperature,
         LLMCapability.Schema.JSON.Basic,
         LLMCapability.Tools,
+        LLMCapability.Vision.Image,
     ),
     contextLength = 40_960,
 )

@@ -15,6 +15,15 @@ sealed interface FileItemStatus {
     data object Pending : FileItemStatus
     data object Suggesting : FileItemStatus
     data class Suggested(val suggestedName: String, val category: String) : FileItemStatus
+    data object Renaming : FileItemStatus
+    data class Renamed(val newName: String) : FileItemStatus
+    /** A rename attempt failed; the suggestion is kept so it can be retried. */
+    data class RenameFailed(
+        val suggestedName: String,
+        val category: String,
+        val message: String,
+    ) : FileItemStatus
+    /** Content extraction or the suggestion request failed. */
     data class Failed(val message: String) : FileItemStatus
 }
 
