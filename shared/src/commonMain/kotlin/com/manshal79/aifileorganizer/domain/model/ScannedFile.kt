@@ -9,6 +9,7 @@ data class ScannedFile(
 )
 
 enum class FileType {
+    CODE,
     PDF,
     IMAGE,
     TEXT_DOCUMENT,
