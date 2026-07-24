@@ -21,6 +21,9 @@ kotlin {
 
             implementation(libs.koog.agents)
 
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+
             implementation(libs.multiplatform.markdown.renderer)
             implementation(libs.multiplatform.markdown.renderer.m3)
         }

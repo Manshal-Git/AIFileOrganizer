@@ -19,6 +19,7 @@ import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
 import com.mikepenz.markdown.model.rememberMarkdownState
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalStdlibApi::class)
 @Composable
@@ -34,7 +35,7 @@ fun App() {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
 
-            val agent by remember { mutableStateOf(Agent()) }
+            val agent = koinInject<Agent>()
 
             Button(onClick = { showContent = !showContent }) {
                 Text("Click me!")
