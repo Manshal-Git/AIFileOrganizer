@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -20,6 +21,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
 
             implementation(libs.koog.agents)
+            implementation(libs.kotlinx.serialization.core)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
