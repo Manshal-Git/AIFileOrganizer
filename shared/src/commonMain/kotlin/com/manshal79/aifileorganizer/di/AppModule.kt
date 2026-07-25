@@ -6,6 +6,7 @@ import ai.koog.prompt.executor.ollama.client.OllamaClient
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
+import com.manshal79.aifileorganizer.domain.usecase.CheckOllamaAvailabilityUseCase
 import com.manshal79.aifileorganizer.domain.usecase.RenameSuggestionUseCase
 import com.manshal79.aifileorganizer.presentation.organizer.OrganizerViewModel
 import org.koin.core.module.dsl.singleOf
@@ -26,7 +27,9 @@ private val ollamaModel = LLModel(
 
 val appModule = module {
     single { ollamaModel }
-    single<PromptExecutor> { MultiLLMPromptExecutor(OllamaClient()) }
+    single { OllamaClient() }
+    single<PromptExecutor> { MultiLLMPromptExecutor(get<OllamaClient>()) }
     singleOf(::RenameSuggestionUseCase)
+    singleOf(::CheckOllamaAvailabilityUseCase)
     viewModelOf(::OrganizerViewModel)
 }

@@ -76,6 +76,11 @@ class OrganizerScreenRenderTest {
         )
     }
 
+    @Test
+    fun `renders the ollama unavailable banner`() {
+        renderScreen(populatedState.copy(ollamaUnavailable = true))
+    }
+
     private companion object {
         // One file per status, so a rendering failure in any branch surfaces here.
         val populatedState = OrganizerState(

@@ -8,6 +8,7 @@ import com.manshal79.aifileorganizer.data.filesystem.FileScanner
 import com.manshal79.aifileorganizer.domain.model.ExtractedContent
 import com.manshal79.aifileorganizer.domain.model.FileType
 import com.manshal79.aifileorganizer.domain.model.TokenUsage
+import com.manshal79.aifileorganizer.domain.usecase.CheckOllamaAvailabilityUseCase
 import com.manshal79.aifileorganizer.domain.usecase.RenameSuggestionUseCase
 import com.manshal79.aifileorganizer.presentation.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ class OrganizerViewModel(
     private val textContentExtractor: TextContentExtractor,
     private val renameSuggestionUseCase: RenameSuggestionUseCase,
     private val fileRenamer: FileRenamer,
+    private val checkOllamaAvailabilityUseCase: CheckOllamaAvailabilityUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OrganizerState())
@@ -36,7 +38,7 @@ class OrganizerViewModel(
             is OrganizerAction.OnApplyRename -> applyRename(action.fileId)
             OrganizerAction.OnApplyAll -> applyAll()
             OrganizerAction.OnUndoAll -> undoAll()
-            OrganizerAction.OnDismissError -> _state.update { it.copy(error = null) }
+            OrganizerAction.OnDismissError -> _state.update { it.copy(error = null, ollamaUnavailable = false) }
         }
     }
 
@@ -81,18 +83,20 @@ class OrganizerViewModel(
                 it.copy(
                     isScanning = true,
                     error = null,
+                    ollamaUnavailable = false,
                     filesToProcess = 0
                 )
             }
             try {
                 val scanned = fileScanner.scan(path)
-                _state.update {
-                    it.copy(
-                        files = scanned.map { file -> file.toFileItemUi() },
-                        isScanning = false,
-                    )
+                val fileItems = scanned.map { file -> file.toFileItemUi() }
+                _state.update { it.copy(files = fileItems, isScanning = false) }
+
+                if (fileItems.any { it.isSupportedType() } && !checkOllamaAvailabilityUseCase.isAvailable()) {
+                    _state.update { it.copy(ollamaUnavailable = true) }
+                } else {
+                    suggestNamesForSupportedFiles()
                 }
-                suggestNamesForSupportedFiles()
             } catch (e: Exception) {
                 _state.update {
                     it.copy(
@@ -108,9 +112,7 @@ class OrganizerViewModel(
     // images (handed to the model directly, no separate extraction step needed
     // since Koog reads the image bytes itself) are the only types suggested for now.
     private suspend fun suggestNamesForSupportedFiles() {
-        val supportedFiles = _state.value.files.filter {
-            it.type == FileType.TEXT_DOCUMENT || it.type == FileType.CODE || it.type == FileType.IMAGE
-        }
+        val supportedFiles = _state.value.files.filter { it.isSupportedType() }
         // Drives the side nav's progress readout.
         _state.update {
             it.copy(
@@ -222,6 +224,14 @@ class OrganizerViewModel(
             _state.update { it.copy(renameHistory = emptyList()) }
         }
     }
+
+    private val supportedTypes = listOf(
+        FileType.TEXT_DOCUMENT,
+        FileType.CODE,
+        FileType.IMAGE
+    )
+
+    private fun FileItemUi.isSupportedType(): Boolean = type in supportedTypes
 
     private fun FileItemStatus.asSuggestion(): FileItemStatus.Suggested? = when (this) {
         is FileItemStatus.Suggested -> this

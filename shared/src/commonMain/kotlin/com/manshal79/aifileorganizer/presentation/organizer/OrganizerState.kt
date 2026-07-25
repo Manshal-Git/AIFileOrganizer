@@ -16,6 +16,7 @@ data class OrganizerState(
     val llmRequestCount: Int = 0,
     val isScanning: Boolean = false,
     val error: UiText? = null,
+    val ollamaUnavailable: Boolean = false,
 ) {
     val hasApplicableSuggestions: Boolean
         get() = files.any { it.status is FileItemStatus.Suggested || it.status is FileItemStatus.RenameFailed }

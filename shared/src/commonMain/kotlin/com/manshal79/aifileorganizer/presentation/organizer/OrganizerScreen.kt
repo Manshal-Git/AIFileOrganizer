@@ -40,6 +40,7 @@ import com.manshal79.aifileorganizer.presentation.organizer.components.FileListE
 import com.manshal79.aifileorganizer.presentation.organizer.components.FileListPanel
 import com.manshal79.aifileorganizer.presentation.organizer.components.FileListSkeleton
 import com.manshal79.aifileorganizer.presentation.organizer.components.FolderToolbar
+import com.manshal79.aifileorganizer.presentation.organizer.components.OllamaUnavailableBanner
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatCardsRow
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatusToast
 import com.manshal79.aifileorganizer.presentation.organizer.components.TokenUsageBar
@@ -117,6 +118,13 @@ private fun MainContent(
     onPickFolderClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
+        if (state.ollamaUnavailable) {
+            OllamaUnavailableBanner(
+                onRetryClick = { onAction(OrganizerAction.OnRescanClick) },
+                onDismiss = { onAction(OrganizerAction.OnDismissError) },
+            )
+        }
+
         HeaderZone(
             autoApprove = state.mode == OrganizeMode.AUTO_PILOT,
             onToggleAutoApprove = { onAction(OrganizerAction.OnToggleMode) },
@@ -406,5 +414,17 @@ private fun OrganizerScreenScanningPreview() {
 private fun OrganizerScreenEmptyPreview() {
     AppTheme {
         OrganizerScreen(state = OrganizerState(), onAction = {}, onPickFolderClick = {})
+    }
+}
+
+@Preview
+@Composable
+private fun OrganizerScreenOllamaUnavailablePreview() {
+    AppTheme {
+        OrganizerScreen(
+            state = previewState.copy(ollamaUnavailable = true),
+            onAction = {},
+            onPickFolderClick = {},
+        )
     }
 }
