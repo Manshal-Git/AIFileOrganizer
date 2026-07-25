@@ -122,24 +122,29 @@ private fun MainContent(
             onToggleAutoApprove = { onAction(OrganizerAction.OnToggleMode) },
         )
 
-        FolderToolbar(
-            folderPath = state.folderPath,
-            viewMode = state.viewMode,
-            canRescan = state.folderPath != null && !state.isBusy,
-            onChangeFolderClick = onPickFolderClick,
-            onRescanClick = { onAction(OrganizerAction.OnRescanClick) },
-            onSetViewMode = { onAction(OrganizerAction.OnSetViewMode(it)) },
-            modifier = Modifier.padding(
-                start = AppDimens.ContainerPadding,
-                end = AppDimens.ContainerPadding,
-                top = AppDimens.Gutter,
-                bottom = AppDimens.StackGap,
-            ),
-        )
+        state.folderPath?.let {
+            FolderToolbar(
+                folderPath = state.folderPath,
+                viewMode = state.viewMode,
+                canRescan = !state.isBusy,
+                onChangeFolderClick = onPickFolderClick,
+                onRescanClick = { onAction(OrganizerAction.OnRescanClick) },
+                onSetViewMode = { onAction(OrganizerAction.OnSetViewMode(it)) },
+                modifier = Modifier.padding(
+                    start = AppDimens.ContainerPadding,
+                    end = AppDimens.ContainerPadding,
+                    top = AppDimens.Gutter,
+                    bottom = AppDimens.StackGap,
+                ),
+            )
+        } ?: run {
+            Spacer(Modifier.height(AppDimens.Gutter))
+        }
 
         FileArea(
             state = state,
             onAction = onAction,
+            onPickFolderClick = onPickFolderClick,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = AppDimens.ContainerPadding),
@@ -234,6 +239,7 @@ private fun AutoApprovePill(checked: Boolean, onToggle: () -> Unit) {
 private fun FileArea(
     state: OrganizerState,
     onAction: (OrganizerAction) -> Unit,
+    onPickFolderClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when {
@@ -242,6 +248,8 @@ private fun FileArea(
         state.folderPath == null -> FileListEmptyState(
             title = "No folder selected",
             subtitle = "Choose a folder to let the AI suggest better file names.",
+            primaryActionLabel = "Select folder",
+            onPrimaryActionClick = onPickFolderClick,
             modifier = modifier,
         )
 

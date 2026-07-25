@@ -191,12 +191,18 @@ private fun ListPanelContainer(
     }
 }
 
-/** Centred placeholder used when there is no folder, or the folder has no files. */
+/**
+ * Centred placeholder used when there is no folder, or the folder has no files.
+ * Pass [primaryActionLabel] to surface a filled CTA button under the subtitle —
+ * used for the no-folder-selected case to give the user an obvious next step.
+ */
 @Composable
 internal fun FileListEmptyState(
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
+    primaryActionLabel: String? = null,
+    onPrimaryActionClick: () -> Unit = {},
 ) {
     ListPanelContainer(modifier = modifier) {
         Column(
@@ -226,6 +232,25 @@ internal fun FileListEmptyState(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (primaryActionLabel != null) {
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = onPrimaryActionClick,
+                    shape = MaterialTheme.shapes.medium,
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                    modifier = Modifier
+                        .heightIn(min = AppDimens.MinTouchTarget)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        imageVector = AppIcons.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(primaryActionLabel, style = MaterialTheme.typography.labelLarge)
+                }
+            }
         }
     }
 }
