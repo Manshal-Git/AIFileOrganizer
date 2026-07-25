@@ -35,6 +35,9 @@ kotlin {
         }
         jvmTest.dependencies {
             implementation(libs.kotlin.testJunit)
+            // Skiko native runtime — needed by the off-screen composition render tests,
+            // which draw through Skia without opening a window.
+            implementation(compose.desktop.currentOs)
         }
     }
 }

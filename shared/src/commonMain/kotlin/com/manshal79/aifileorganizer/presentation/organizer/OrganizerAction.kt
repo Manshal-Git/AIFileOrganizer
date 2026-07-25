@@ -12,4 +12,5 @@ sealed interface OrganizerAction {
     data class OnApplyRename(val fileId: String) : OrganizerAction
     data object OnApplyAll : OrganizerAction
     data object OnUndoAll : OrganizerAction
+    data object OnDismissError : OrganizerAction
 }

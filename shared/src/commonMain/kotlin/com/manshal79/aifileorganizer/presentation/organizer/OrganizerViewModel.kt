@@ -35,6 +35,7 @@ class OrganizerViewModel(
             is OrganizerAction.OnApplyRename -> applyRename(action.fileId)
             OrganizerAction.OnApplyAll -> applyAll()
             OrganizerAction.OnUndoAll -> undoAll()
+            OrganizerAction.OnDismissError -> _state.update { it.copy(error = null) }
         }
     }
 
@@ -75,7 +76,7 @@ class OrganizerViewModel(
 
     private fun scan(path: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isScanning = true, error = null) }
+            _state.update { it.copy(isScanning = true, error = null, analyzableCount = 0) }
             try {
                 val scanned = fileScanner.scan(path)
                 _state.update {
@@ -103,6 +104,8 @@ class OrganizerViewModel(
         val supportedFiles = _state.value.files.filter {
             it.type == FileType.TEXT_DOCUMENT || it.type == FileType.CODE || it.type == FileType.IMAGE
         }
+        // Drives the side nav's progress readout.
+        _state.update { it.copy(analyzableCount = supportedFiles.size) }
         for (file in supportedFiles) {
             updateFile(file.id) { it.copy(status = FileItemStatus.Suggesting) }
             try {
