@@ -2,6 +2,7 @@ package com.manshal79.aifileorganizer.presentation.organizer
 
 import com.manshal79.aifileorganizer.domain.model.FileType
 import com.manshal79.aifileorganizer.domain.model.ScannedFile
+import com.manshal79.aifileorganizer.domain.model.TokenUsage
 
 data class FileItemUi(
     val id: String,
@@ -9,6 +10,7 @@ data class FileItemUi(
     val path: String,
     val type: FileType,
     val status: FileItemStatus = FileItemStatus.Pending,
+    val tokenUsage: TokenUsage? = null,
 )
 
 sealed interface FileItemStatus {

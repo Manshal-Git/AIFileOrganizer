@@ -7,6 +7,7 @@ import com.manshal79.aifileorganizer.data.filesystem.FileRenamer
 import com.manshal79.aifileorganizer.data.filesystem.FileScanner
 import com.manshal79.aifileorganizer.domain.model.ExtractedContent
 import com.manshal79.aifileorganizer.domain.model.FileType
+import com.manshal79.aifileorganizer.domain.model.TokenUsage
 import com.manshal79.aifileorganizer.domain.usecase.RenameSuggestionUseCase
 import com.manshal79.aifileorganizer.presentation.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +77,13 @@ class OrganizerViewModel(
 
     private fun scan(path: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isScanning = true, error = null, analyzableCount = 0) }
+            _state.update {
+                it.copy(
+                    isScanning = true,
+                    error = null,
+                    filesToProcess = 0
+                )
+            }
             try {
                 val scanned = fileScanner.scan(path)
                 _state.update {
@@ -105,7 +112,11 @@ class OrganizerViewModel(
             it.type == FileType.TEXT_DOCUMENT || it.type == FileType.CODE || it.type == FileType.IMAGE
         }
         // Drives the side nav's progress readout.
-        _state.update { it.copy(analyzableCount = supportedFiles.size) }
+        _state.update {
+            it.copy(
+                filesToProcess = supportedFiles.size
+            )
+        }
         for (file in supportedFiles) {
             updateFile(file.id) { it.copy(status = FileItemStatus.Suggesting) }
             try {
@@ -113,9 +124,17 @@ class OrganizerViewModel(
                     FileType.IMAGE -> ExtractedContent.Image(file.path)
                     else -> ExtractedContent.Text(textContentExtractor.extract(file.path))
                 }
-                val suggestion = renameSuggestionUseCase.suggest(fileName = file.name, content = content)
+                val result =
+                    renameSuggestionUseCase.suggest(fileName = file.name, content = content)
+                accumulateUsage(result.usage)
                 updateFile(file.id) {
-                    it.copy(status = FileItemStatus.Suggested(suggestion.suggestedName, suggestion.category))
+                    it.copy(
+                        status = FileItemStatus.Suggested(
+                            result.suggestion.suggestedName,
+                            result.suggestion.category,
+                        ),
+                        tokenUsage = result.usage,
+                    )
                 }
                 // In auto-pilot the suggestion is applied immediately; in review it waits for the user.
                 if (_state.value.mode == OrganizeMode.AUTO_PILOT) {
@@ -126,6 +145,15 @@ class OrganizerViewModel(
                     it.copy(status = FileItemStatus.Failed(e.message ?: "Couldn't suggest a name"))
                 }
             }
+        }
+    }
+    
+    private fun accumulateUsage(usage: TokenUsage) {
+        _state.update {
+            it.copy(
+                tokenUsage = it.tokenUsage + usage,
+                llmRequestCount = it.llmRequestCount + 1,
+            )
         }
     }
 

@@ -20,10 +20,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manshal79.aifileorganizer.domain.model.FileType
+import com.manshal79.aifileorganizer.domain.model.TokenUsage
 import com.manshal79.aifileorganizer.presentation.asString
 import com.manshal79.aifileorganizer.presentation.designsystem.AppDimens
 import com.manshal79.aifileorganizer.presentation.designsystem.AppTheme
@@ -45,6 +42,7 @@ import com.manshal79.aifileorganizer.presentation.organizer.components.FileListS
 import com.manshal79.aifileorganizer.presentation.organizer.components.FolderToolbar
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatCardsRow
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatusToast
+import com.manshal79.aifileorganizer.presentation.organizer.components.TokenUsageBar
 import com.manshal79.aifileorganizer.presentation.organizer.components.ToastContent
 import com.manshal79.aifileorganizer.presentation.organizer.components.ToastTone
 import org.koin.compose.viewmodel.koinViewModel
@@ -90,7 +88,7 @@ fun OrganizerScreen(
                 workspaceName = state.folderName ?: "Workspace",
                 autoPilotOn = state.mode == OrganizeMode.AUTO_PILOT,
                 analyzedCount = state.analyzedCount,
-                analyzableCount = state.analyzableCount,
+                analyzableCount = state.filesToProcess,
             )
 
             Box(modifier = Modifier.weight(1f).fillMaxSize()) {
@@ -148,6 +146,17 @@ private fun MainContent(
         )
 
         if (state.folderPath != null) {
+            if (state.llmRequestCount > 0) {
+                TokenUsageBar(
+                    usage = state.tokenUsage,
+                    requestCount = state.llmRequestCount,
+                    modifier = Modifier.padding(
+                        start = AppDimens.ContainerPadding,
+                        end = AppDimens.ContainerPadding,
+                        top = AppDimens.StackGap,
+                    ),
+                )
+            }
             StatCardsRow(
                 suggestionsReady = state.suggestionsReadyCount,
                 renamedCount = state.renamedCount,
@@ -288,6 +297,7 @@ private val previewFiles = listOf(
         path = "/1",
         type = FileType.IMAGE,
         status = FileItemStatus.Suggested("jigsaw-puzzle-medium", "puzzles"),
+        tokenUsage = TokenUsage(inputTokens = 1_842, outputTokens = 27),
     ),
     FileItemUi(
         id = "2",
@@ -309,6 +319,7 @@ private val previewFiles = listOf(
         path = "/4",
         type = FileType.IMAGE,
         status = FileItemStatus.Renamed("golden-gate-bridge-sunset.png"),
+        tokenUsage = TokenUsage(inputTokens = 1_790, outputTokens = 31),
     ),
     FileItemUi(
         id = "5",
@@ -323,6 +334,7 @@ private val previewFiles = listOf(
         path = "/6",
         type = FileType.TEXT_DOCUMENT,
         status = FileItemStatus.RenameFailed("meeting-notes", "notes", "Target already exists"),
+        tokenUsage = TokenUsage(inputTokens = 640, outputTokens = 24),
     ),
     FileItemUi(
         id = "7",
@@ -344,7 +356,9 @@ private val previewFiles = listOf(
 private val previewState = OrganizerState(
     folderPath = "/Users/mansh/Documents/FileOrganizerTestContent/screenshots",
     files = previewFiles,
-    analyzableCount = 8,
+    filesToProcess = 8,
+    tokenUsage = TokenUsage(inputTokens = 12_480, outputTokens = 342),
+    llmRequestCount = 6,
 )
 
 @Preview

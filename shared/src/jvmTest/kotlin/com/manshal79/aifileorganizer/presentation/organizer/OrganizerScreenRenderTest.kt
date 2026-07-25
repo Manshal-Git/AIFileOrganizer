@@ -4,6 +4,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import com.manshal79.aifileorganizer.domain.model.FileType
+import com.manshal79.aifileorganizer.domain.model.TokenUsage
 import com.manshal79.aifileorganizer.presentation.designsystem.AppTheme
 import kotlin.test.Test
 
@@ -79,7 +80,9 @@ class OrganizerScreenRenderTest {
         // One file per status, so a rendering failure in any branch surfaces here.
         val populatedState = OrganizerState(
             folderPath = "/Users/mansh/Documents/screenshots",
-            analyzableCount = 6,
+            filesToProcess = 6,
+            tokenUsage = TokenUsage(inputTokens = 12_480, outputTokens = 342),
+            llmRequestCount = 6,
             files = listOf(
                 FileItemUi("1", "Screenshot_1.png", "/1", FileType.IMAGE, FileItemStatus.Pending),
                 FileItemUi("2", "Screenshot_2.png", "/2", FileType.IMAGE, FileItemStatus.Suggesting),
@@ -89,6 +92,7 @@ class OrganizerScreenRenderTest {
                     "/3",
                     FileType.IMAGE,
                     FileItemStatus.Suggested("jigsaw-puzzle-medium", "puzzles"),
+                    tokenUsage = TokenUsage(inputTokens = 1_842, outputTokens = 27),
                 ),
                 FileItemUi("4", "notes.md", "/4", FileType.TEXT_DOCUMENT, FileItemStatus.Renaming),
                 FileItemUi(
@@ -97,6 +101,7 @@ class OrganizerScreenRenderTest {
                     "/5",
                     FileType.TEXT_DOCUMENT,
                     FileItemStatus.Renamed("meeting-notes.md"),
+                    tokenUsage = TokenUsage(inputTokens = 980, outputTokens = 22),
                 ),
                 FileItemUi(
                     "6",

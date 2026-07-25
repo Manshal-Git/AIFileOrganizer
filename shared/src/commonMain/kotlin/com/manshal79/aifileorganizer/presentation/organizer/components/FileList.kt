@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.manshal79.aifileorganizer.domain.model.FileType
+import com.manshal79.aifileorganizer.domain.model.TokenUsage
 import com.manshal79.aifileorganizer.presentation.designsystem.AppDimens
 import com.manshal79.aifileorganizer.presentation.designsystem.AppIcons
 import com.manshal79.aifileorganizer.presentation.designsystem.EyebrowTextStyle
@@ -323,7 +324,7 @@ private fun FileRow(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(2.dp))
-                FileStatusLine(file.status, file.name)
+                FileStatusLine(file.status, file.name, file.tokenUsage)
             }
             Spacer(Modifier.width(16.dp))
             RowActions(status = file.status, onApply = onApply)
@@ -355,7 +356,7 @@ private fun FileCard(
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(4.dp))
-        FileStatusLine(file.status, file.name)
+        FileStatusLine(file.status, file.name, file.tokenUsage)
         Spacer(Modifier.height(10.dp))
         RowActions(status = file.status, onApply = onApply, fillWidth = true)
     }
@@ -425,14 +426,12 @@ private fun OriginalNameText(
     }
 }
 
-/**
- * The second line of a row: the suggestion, the progress message, or the failure.
- *
- * [originalName] is only used to echo the file's extension onto the suggested base
- * name, so the row previews the actual resulting filename.
- */
 @Composable
-private fun FileStatusLine(status: FileItemStatus, originalName: String) {
+private fun FileStatusLine(
+    status: FileItemStatus,
+    originalName: String,
+    tokenUsage: TokenUsage?,
+) {
     when (status) {
         FileItemStatus.Pending -> StatusText(
             text = "Waiting to be analyzed",
@@ -444,6 +443,7 @@ private fun FileStatusLine(status: FileItemStatus, originalName: String) {
         is FileItemStatus.Suggested -> SuggestedNameLine(
             suggestedName = status.suggestedName.withExtensionOf(originalName),
             category = status.category,
+            tokenUsage = tokenUsage,
         )
 
         FileItemStatus.Renaming -> ProgressStatus("Renaming…")
@@ -462,13 +462,20 @@ private fun FileStatusLine(status: FileItemStatus, originalName: String) {
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
+            // Auto-pilot skips the Suggested state entirely, so the cost has to show here too.
+            if (tokenUsage != null) {
+                Spacer(Modifier.width(8.dp))
+                TokenChip(tokenUsage)
+            }
         }
 
         is FileItemStatus.RenameFailed -> Column {
             SuggestedNameLine(
                 suggestedName = status.suggestedName.withExtensionOf(originalName),
                 category = status.category,
+                tokenUsage = tokenUsage,
             )
             ErrorStatus(status.message)
         }
@@ -478,7 +485,11 @@ private fun FileStatusLine(status: FileItemStatus, originalName: String) {
 }
 
 @Composable
-private fun SuggestedNameLine(suggestedName: String, category: String) {
+private fun SuggestedNameLine(
+    suggestedName: String,
+    category: String,
+    tokenUsage: TokenUsage?
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = AppIcons.ArrowForward,
@@ -498,6 +509,47 @@ private fun SuggestedNameLine(suggestedName: String, category: String) {
         if (category.isNotBlank()) {
             Spacer(Modifier.width(8.dp))
             CategoryChip(category)
+        }
+        if (tokenUsage != null) {
+            Spacer(Modifier.width(8.dp))
+            TokenChip(tokenUsage)
+        }
+    }
+}
+
+/**
+ * What this one file's suggestion cost — the per-request detail behind the session-wide
+ * usage bar. The split between input and output sits in the hover tooltip so the row
+ * stays readable.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TokenChip(usage: TokenUsage) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = {
+            PlainTooltip {
+                Text("${usage.inputTokens.grouped()} input · ${usage.outputTokens.grouped()} output")
+            }
+        },
+        state = rememberTooltipState(),
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .semantics {
+                    contentDescription = "${usage.inputTokens} input tokens, " +
+                        "${usage.outputTokens} output tokens"
+                }
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+        ) {
+            Text(
+                text = "${usage.totalTokens.grouped()} tok",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
         }
     }
 }

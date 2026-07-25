@@ -1,6 +1,7 @@
 package com.manshal79.aifileorganizer.presentation.organizer
 
 import com.manshal79.aifileorganizer.domain.model.FileType
+import com.manshal79.aifileorganizer.domain.model.TokenUsage
 import com.manshal79.aifileorganizer.presentation.UiText
 
 data class OrganizerState(
@@ -10,8 +11,9 @@ data class OrganizerState(
     val files: List<FileItemUi> = emptyList(),
     val collapsedTypes: Set<FileType> = emptySet(),
     val renameHistory: List<RenameRecord> = emptyList(),
-    /** How many of [files] the AI will actually attempt a suggestion for. */
-    val analyzableCount: Int = 0,
+    val filesToProcess: Int = 0,
+    val tokenUsage: TokenUsage = TokenUsage.Zero,
+    val llmRequestCount: Int = 0,
     val isScanning: Boolean = false,
     val error: UiText? = null,
 ) {
