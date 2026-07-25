@@ -12,11 +12,11 @@ import kotlinx.io.files.Path
 
 class RenameSuggestionUseCase(
     private val promptExecutor: PromptExecutor,
-    private val model: LLModel,
 ) {
     suspend fun suggest(
         fileName: String,
-        content: ExtractedContent
+        content: ExtractedContent,
+        model: LLModel,
     ): RenameSuggestionResult {
         val result = promptExecutor.executeStructured<RenameSuggestion>(
             prompt = prompt("rename-suggestion") {

@@ -81,6 +81,29 @@ class OrganizerScreenRenderTest {
         renderScreen(populatedState.copy(ollamaUnavailable = true))
     }
 
+    @Test
+    fun `renders the header with a selected model`() {
+        val model = OllamaModelUi(
+            id = "gemma3:4b",
+            displayName = "gemma3:4b",
+            family = "gemma3",
+            parameterLabel = "4.3B params",
+            sizeLabel = "2.9 GB",
+            contextLengthLabel = "40,960 tokens",
+            quantizationLevel = "Q4_K_M",
+            supportsVision = true,
+            supportsTools = true,
+            supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE, FileType.IMAGE),
+            isRecommended = true,
+        )
+        renderScreen(populatedState.copy(availableModels = listOf(model), selectedModelId = model.id))
+    }
+
+    @Test
+    fun `renders the header while models are loading`() {
+        renderScreen(populatedState.copy(isLoadingModels = true))
+    }
+
     private companion object {
         // One file per status, so a rendering failure in any branch surfaces here.
         val populatedState = OrganizerState(

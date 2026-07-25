@@ -1,5 +1,8 @@
 package com.manshal79.aifileorganizer.presentation.organizer
 
+import ai.koog.prompt.executor.ollama.client.OllamaModelCard
+import ai.koog.prompt.executor.ollama.client.toLLModel
+import ai.koog.prompt.llm.LLModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.manshal79.aifileorganizer.data.content.TextContentExtractor
@@ -8,7 +11,7 @@ import com.manshal79.aifileorganizer.data.filesystem.FileScanner
 import com.manshal79.aifileorganizer.domain.model.ExtractedContent
 import com.manshal79.aifileorganizer.domain.model.FileType
 import com.manshal79.aifileorganizer.domain.model.TokenUsage
-import com.manshal79.aifileorganizer.domain.usecase.CheckOllamaAvailabilityUseCase
+import com.manshal79.aifileorganizer.domain.usecase.GetAvailableOllamaModelsUseCase
 import com.manshal79.aifileorganizer.domain.usecase.RenameSuggestionUseCase
 import com.manshal79.aifileorganizer.presentation.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,11 +24,19 @@ class OrganizerViewModel(
     private val textContentExtractor: TextContentExtractor,
     private val renameSuggestionUseCase: RenameSuggestionUseCase,
     private val fileRenamer: FileRenamer,
-    private val checkOllamaAvailabilityUseCase: CheckOllamaAvailabilityUseCase,
+    private val getAvailableOllamaModelsUseCase: GetAvailableOllamaModelsUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OrganizerState())
     val state = _state.asStateFlow()
+
+    // Kept alongside state.availableModels (the UI-safe projection) so a real LLModel with its
+    // actual Koog capabilities can be rebuilt for the use case without leaking that type into state.
+    private var availableModelCards: List<OllamaModelCard> = emptyList()
+
+    init {
+        viewModelScope.launch { loadModels() }
+    }
 
     fun onAction(action: OrganizerAction) {
         when (action) {
@@ -39,6 +50,8 @@ class OrganizerViewModel(
             OrganizerAction.OnApplyAll -> applyAll()
             OrganizerAction.OnUndoAll -> undoAll()
             OrganizerAction.OnDismissError -> _state.update { it.copy(error = null, ollamaUnavailable = false) }
+            OrganizerAction.OnRefreshModels -> viewModelScope.launch { loadModels() }
+            is OrganizerAction.OnSelectModel -> _state.update { it.copy(selectedModelId = action.modelId) }
         }
     }
 
@@ -92,7 +105,8 @@ class OrganizerViewModel(
                 val fileItems = scanned.map { file -> file.toFileItemUi() }
                 _state.update { it.copy(files = fileItems, isScanning = false) }
 
-                if (fileItems.any { it.isSupportedType() } && !checkOllamaAvailabilityUseCase.isAvailable()) {
+                val ollamaAvailable = loadModels()
+                if (fileItems.any { it.isSupportedType() } && !ollamaAvailable) {
                     _state.update { it.copy(ollamaUnavailable = true) }
                 } else {
                     suggestNamesForSupportedFiles()
@@ -108,10 +122,47 @@ class OrganizerViewModel(
         }
     }
 
+    /**
+     * Refreshes the pickable model list. Returns whether Ollama actually responded.
+     *
+     * A failed fetch (Ollama momentarily down) leaves the last known-good list and selection
+     * alone rather than wiping the picker — only a successful fetch replaces them.
+     */
+    private suspend fun loadModels(): Boolean {
+        _state.update { it.copy(isLoadingModels = true) }
+        val result = getAvailableOllamaModelsUseCase.getModels()
+        result.onSuccess { cards ->
+            availableModelCards = cards
+            val uiModels = cards.map { it.toOllamaModelUi() }
+            _state.update { current ->
+                // Falls back to a fresh default if the previously selected model was pulled/removed.
+                val stillInstalled = uiModels.any { it.id == current.selectedModelId }
+                current.copy(
+                    availableModels = uiModels,
+                    selectedModelId = current.selectedModelId.takeIf { stillInstalled } ?: uiModels.pickDefault()?.id,
+                )
+            }
+        }
+        _state.update { it.copy(isLoadingModels = false) }
+        return result.isSuccess
+    }
+
+    private fun List<OllamaModelUi>.pickDefault(): OllamaModelUi? =
+        firstOrNull { it.isRecommended } ?: firstOrNull()
+
+    private fun currentLLModel(): LLModel? =
+        availableModelCards.find { it.name == _state.value.selectedModelId }?.toLLModel()
+
     // PDF extraction isn't built yet, so text/code files (read as plain text) and
     // images (handed to the model directly, no separate extraction step needed
     // since Koog reads the image bytes itself) are the only types suggested for now.
     private suspend fun suggestNamesForSupportedFiles() {
+        val model = currentLLModel()
+        if (model == null) {
+            _state.update { it.copy(ollamaUnavailable = true) }
+            return
+        }
+
         val supportedFiles = _state.value.files.filter { it.isSupportedType() }
         // Drives the side nav's progress readout.
         _state.update {
@@ -127,7 +178,7 @@ class OrganizerViewModel(
                     else -> ExtractedContent.Text(textContentExtractor.extract(file.path))
                 }
                 val result =
-                    renameSuggestionUseCase.suggest(fileName = file.name, content = content)
+                    renameSuggestionUseCase.suggest(fileName = file.name, content = content, model = model)
                 accumulateUsage(result.usage)
                 updateFile(file.id) {
                     it.copy(

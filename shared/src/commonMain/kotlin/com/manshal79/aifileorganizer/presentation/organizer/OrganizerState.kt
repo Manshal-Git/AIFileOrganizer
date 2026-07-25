@@ -17,7 +17,13 @@ data class OrganizerState(
     val isScanning: Boolean = false,
     val error: UiText? = null,
     val ollamaUnavailable: Boolean = false,
+    val availableModels: List<OllamaModelUi> = emptyList(),
+    val selectedModelId: String? = null,
+    val isLoadingModels: Boolean = false,
 ) {
+    val selectedModel: OllamaModelUi?
+        get() = availableModels.find { it.id == selectedModelId }
+
     val hasApplicableSuggestions: Boolean
         get() = files.any { it.status is FileItemStatus.Suggested || it.status is FileItemStatus.RenameFailed }
 

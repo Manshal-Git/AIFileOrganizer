@@ -20,6 +20,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +43,8 @@ import com.manshal79.aifileorganizer.presentation.organizer.components.FileListE
 import com.manshal79.aifileorganizer.presentation.organizer.components.FileListPanel
 import com.manshal79.aifileorganizer.presentation.organizer.components.FileListSkeleton
 import com.manshal79.aifileorganizer.presentation.organizer.components.FolderToolbar
+import com.manshal79.aifileorganizer.presentation.organizer.components.ModelPickerDialog
+import com.manshal79.aifileorganizer.presentation.organizer.components.ModelSelectorChip
 import com.manshal79.aifileorganizer.presentation.organizer.components.OllamaUnavailableBanner
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatCardsRow
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatusToast
@@ -71,6 +76,8 @@ fun OrganizerScreen(
     onAction: (OrganizerAction) -> Unit,
     onPickFolderClick: () -> Unit,
 ) {
+    var showModelPicker by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -97,6 +104,10 @@ fun OrganizerScreen(
                     state = state,
                     onAction = onAction,
                     onPickFolderClick = onPickFolderClick,
+                    onOpenModelPicker = {
+                        showModelPicker = true
+                        onAction(OrganizerAction.OnRefreshModels)
+                    },
                 )
 
                 StatusToast(
@@ -109,6 +120,20 @@ fun OrganizerScreen(
             }
         }
     }
+
+    if (showModelPicker) {
+        ModelPickerDialog(
+            models = state.availableModels,
+            selectedModelId = state.selectedModelId,
+            isLoading = state.isLoadingModels,
+            onSelect = {
+                onAction(OrganizerAction.OnSelectModel(it))
+                showModelPicker = false
+            },
+            onRefresh = { onAction(OrganizerAction.OnRefreshModels) },
+            onDismiss = { showModelPicker = false },
+        )
+    }
 }
 
 @Composable
@@ -116,6 +141,7 @@ private fun MainContent(
     state: OrganizerState,
     onAction: (OrganizerAction) -> Unit,
     onPickFolderClick: () -> Unit,
+    onOpenModelPicker: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (state.ollamaUnavailable) {
@@ -128,6 +154,9 @@ private fun MainContent(
         HeaderZone(
             autoApprove = state.mode == OrganizeMode.AUTO_PILOT,
             onToggleAutoApprove = { onAction(OrganizerAction.OnToggleMode) },
+            selectedModel = state.selectedModel,
+            isLoadingModels = state.isLoadingModels,
+            onOpenModelPicker = onOpenModelPicker,
         )
 
         state.folderPath?.let {
@@ -186,11 +215,14 @@ private fun MainContent(
     }
 }
 
-/** Page title plus the auto-approve switch, on the design's tinted band. */
+/** Page title plus the model picker and auto-approve switch, on the design's tinted band. */
 @Composable
 private fun HeaderZone(
     autoApprove: Boolean,
     onToggleAutoApprove: () -> Unit,
+    selectedModel: OllamaModelUi?,
+    isLoadingModels: Boolean,
+    onOpenModelPicker: () -> Unit,
 ) {
     Column {
         Row(
@@ -209,7 +241,17 @@ private fun HeaderZone(
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            AutoApprovePill(checked = autoApprove, onToggle = onToggleAutoApprove)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ModelSelectorChip(
+                    selectedModel = selectedModel,
+                    isLoading = isLoadingModels,
+                    onClick = onOpenModelPicker,
+                )
+                AutoApprovePill(checked = autoApprove, onToggle = onToggleAutoApprove)
+            }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     }

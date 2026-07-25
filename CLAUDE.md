@@ -16,7 +16,7 @@ What the app does: pick a folder, scan it, send each supported file's content to
 - Run tests: `./gradlew :shared:jvmTest`
 - Package native distributables (dmg/msi/deb): `./gradlew :desktopApp:packageDmg`, `packageMsi`, `packageDeb`
 
-The app calls a local Ollama server at `http://localhost:11434` — Ollama must be running with the `gemma3:4b` model pulled for the AI features to work.
+The app calls a local Ollama server at `http://localhost:11434`. The user picks which pulled model to use from a picker in the header (backed by `OllamaClient.getModels()`); there's no hardcoded default model anymore, so at least one model must be pulled (`ollama pull gemma3:4b` is a reasonable one — it has vision).
 
 ## Architecture
 
@@ -32,30 +32,33 @@ presentation/organizer   MVI screen: OrganizerState / OrganizerAction / Organize
         │                + components/ (stateless composables) + designsystem/ (theme, colors, icons, dimens)
         ▼
 domain/usecase           RenameSuggestionUseCase — the only thing that talks to the LLM
+        │                GetAvailableOllamaModelsUseCase — lists pulled models for the picker
         │                domain/model — ScannedFile, RenameSuggestion, TokenUsage, …
         ▼
 data/filesystem          FileScanner, FileRenamer, FileTypeClassifier, FileNameSanitizer
 data/content             TextContentExtractor
 ```
 
-- `di/AppModule.kt` (commonMain) provides the `LLModel`, `PromptExecutor`, use cases and ViewModel. `di/PlatformModule.kt` (jvmMain) binds the JVM implementations of the data interfaces. Both are started in `main.kt`.
+- `di/AppModule.kt` (commonMain) provides the `OllamaClient`, `PromptExecutor`, use cases and ViewModel. `di/PlatformModule.kt` (jvmMain) binds the JVM implementations of the data interfaces. Both are started in `main.kt`.
 - The ViewModel coordinates; business logic lives in use cases and the `data/` helpers. Follow that split when adding features.
 - The screen is the only place a ViewModel is touched (`OrganizerRoot`); everything under `components/` takes plain state + lambdas so it stays previewable.
 
 ### Key files
 
-- `di/AppModule.kt` — the Koog `LLModel`: provider `LLMProvider.Ollama`, id `gemma3:4b`, capabilities `Temperature`, `Schema.JSON.Basic`, `Tools`, `Vision.Image`, `contextLength = 40_960`.
-- `domain/usecase/RenameSuggestionUseCase.kt` — builds the prompt and calls `promptExecutor.executeStructured<RenameSuggestion>()`. Single entry point for LLM calls.
-- `presentation/organizer/OrganizerViewModel.kt` — scan → suggest loop, rename, undo, token accounting.
-- `presentation/organizer/components/` — top bar, side nav, folder toolbar, file list/grid, stat cards, token usage bar, toast.
+- `di/AppModule.kt` — provides a single `OllamaClient` (default base URL, `http://localhost:11434`), reused by both the `PromptExecutor` and `GetAvailableOllamaModelsUseCase`. No `LLModel` singleton anymore — see below.
+- `domain/usecase/GetAvailableOllamaModelsUseCase.kt` — wraps `OllamaClient.getModels()` in a `Result`; this is also how `OrganizerViewModel` detects "Ollama unreachable".
+- `presentation/organizer/OllamaModelUi.kt` — UI-safe projection of Koog's `OllamaModelCard` (`toOllamaModelUi()`), with derived fields the model picker needs: formatted size/param/context labels, `supportsVision`/`supportsTools`, `supportedFileTypes`, `isRecommended` (== has vision, since that's the only capability gap that matters for this app's file types).
+- `presentation/organizer/OrganizerViewModel.kt` — holds `availableModelCards: List<OllamaModelCard>` privately (not in state) so `currentLLModel()` can rebuild a real `LLModel` via Koog's `OllamaModelCard.toLLModel()` for whichever model is selected. `loadModels()` runs at `init` and again on every `scan()`/`OnRefreshModels`; a failed fetch leaves the last known-good list alone rather than clearing the picker.
+- `domain/usecase/RenameSuggestionUseCase.kt` — builds the prompt and calls `promptExecutor.executeStructured<RenameSuggestion>()`. Takes `model: LLModel` per call now (not injected), so the ViewModel decides which model to use per request.
+- `presentation/organizer/components/` — top bar, side nav, folder toolbar, file list/grid, stat cards, token usage bar, toast, `ModelPicker.kt` (header chip + accordion dialog for model selection), `OllamaUnavailableBanner.kt` (shown when a scan needs the LLM and Ollama didn't respond).
 
 Dependency versions are centralized in `gradle/libs.versions.toml` (version catalog) — add new dependencies there, not as inline coordinates in module `build.gradle.kts` files.
 
 ## Notes for AI-feature work
 
-- If you change the model, keep the `capabilities` list consistent with what that model actually supports. `Vision.Image` is required for image files — without it Koog rejects image parts in the prompt.
-- Ollama not running is the expected failure mode. Failures surface per file as `FileItemStatus.Failed`, and folder-level failures as `OrganizerState.error`.
-- **Verify Koog APIs against the jars**, not against docs or memory — decompile from `~/.gradle/caches/modules-2/files-2.1/ai.koog/` with `javap`. The 1.0.0 API differs from most published examples.
+- Models are user-selected now, not hardcoded — capabilities come from `OllamaModelCard.capabilities` (via `OllamaClient.getModels()` → Ollama's `/api/show`), not a fixed list. `Vision.Image` is required for image files — without it Koog rejects image parts in the prompt, which is why the picker flags models lacking it.
+- Ollama not running is expected. It's handled at two levels: `OrganizerState.ollamaUnavailable` drives a prominent, persistent banner (`OllamaUnavailableBanner`) when a scan has suggestible files and the availability check fails — this is louder than the corner `StatusToast` on purpose, since a silent per-file failure spray was the previous (worse) behavior. Per-file failures (rename or extraction errors unrelated to connectivity) still surface as `FileItemStatus.Failed`.
+- **Verify Koog APIs against the jars**, not against docs or memory — decompile from `~/.gradle/caches/modules-2/files-2.1/ai.koog/` with `javap`, or unzip the `-sources.jar` for readable Kotlin. The 1.0.0 API differs from most published examples.
 
 ### Token usage
 
@@ -68,9 +71,9 @@ Per-request token counts come from the provider's own accounting, not an estimat
 
 ## Testing
 
-`:shared` has `commonTest` (pure logic: `FileNameSanitizerTest`, `FileTypeClassifierTest`) and `jvmTest` (file I/O against temp dirs, plus `OrganizerScreenRenderTest`).
+`:shared` has `commonTest` (pure logic: `FileNameSanitizerTest`, `FileTypeClassifierTest`) and `jvmTest` (file I/O against temp dirs, plus `OrganizerScreenRenderTest` and `components/ModelPickerDialogRenderTest`).
 
-`OrganizerScreenRenderTest` renders the screen off-screen with `ImageComposeScene` in each state — it's a crash smoke test for composition/layout failures, not a visual one. When adding a new file status or screen state, add it to `populatedState` there. Visual review is done by running the app.
+Both render tests compose off-screen with `ImageComposeScene` (including the `ModelPickerDialog`'s `androidx.compose.ui.window.Dialog` — it renders fine headless in this harness, no real window needed) — they're crash smoke tests for composition/layout failures, not visual ones. When adding a new file status or screen state, add it to `OrganizerScreenRenderTest`'s `populatedState`; new model-capability combinations go in `ModelPickerDialogRenderTest`. Visual review is done by running the app.
 
 ## Not built yet
 

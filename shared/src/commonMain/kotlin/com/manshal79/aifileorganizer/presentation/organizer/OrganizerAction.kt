@@ -13,4 +13,6 @@ sealed interface OrganizerAction {
     data object OnApplyAll : OrganizerAction
     data object OnUndoAll : OrganizerAction
     data object OnDismissError : OrganizerAction
+    data object OnRefreshModels : OrganizerAction
+    data class OnSelectModel(val modelId: String) : OrganizerAction
 }
