@@ -11,6 +11,9 @@ data class FileItemUi(
     val type: FileType,
     val status: FileItemStatus = FileItemStatus.Pending,
     val tokenUsage: TokenUsage? = null,
+    val durationMillis: Long? = null,
+    /** True when this suggestion was reused from the cache instead of asking the model again. */
+    val fromCache: Boolean = false,
 )
 
 sealed interface FileItemStatus {

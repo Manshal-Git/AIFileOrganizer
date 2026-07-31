@@ -35,12 +35,16 @@ import com.manshal79.aifileorganizer.presentation.designsystem.EyebrowTextStyle
 internal fun TokenUsageBar(
     usage: TokenUsage,
     requestCount: Int,
+    totalDurationMillis: Long,
+    cacheHitCount: Int,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(12.dp)
     // The figures read badly one cell at a time, so the whole strip is announced as a sentence.
     val spokenSummary = "AI usage: ${usage.inputTokens} input tokens, ${usage.outputTokens} " +
-        "output tokens, ${usage.totalTokens} total across $requestCount requests"
+        "output tokens, ${usage.totalTokens} total across $requestCount requests, " +
+        "${totalDurationMillis.formatDuration()} elapsed" +
+        if (cacheHitCount > 0) ", $cacheHitCount reused from cache" else ""
 
     Row(
         modifier = modifier
@@ -71,6 +75,7 @@ internal fun TokenUsageBar(
             UsageFigure(label = "Input", value = usage.inputTokens)
             UsageFigure(label = "Output", value = usage.outputTokens)
             UsageFigure(label = "Total", value = usage.totalTokens)
+            TimeFigure(label = "Time", value = totalDurationMillis)
         }
 
         Spacer(Modifier.width(20.dp))
@@ -79,6 +84,14 @@ internal fun TokenUsageBar(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (cacheHitCount > 0) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "· $cacheHitCount cached",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 
@@ -99,6 +112,39 @@ private fun UsageFigure(label: String, value: Int) {
     }
 }
 
+@Composable
+private fun TimeFigure(label: String, value: Long) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = value.formatDuration(),
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
 /** `12480` -> `12,480`. Common code has no `String.format`, so group the digits by hand. */
 internal fun Int.grouped(): String =
     toString().reversed().chunked(3).joinToString(",").reversed()
+
+/** `340` -> `340ms`, `1900` -> `1.9s`, `75_000` -> `1m 15s`. */
+internal fun Long.formatDuration(): String {
+    val totalMs = this
+    return when {
+        totalMs < 1_000 -> "${totalMs}ms"
+        totalMs < 60_000 -> {
+            val tenths = totalMs / 100
+            "${tenths / 10}.${tenths % 10}s"
+        }
+        else -> {
+            val totalSeconds = totalMs / 1_000
+            "${totalSeconds / 60}m ${totalSeconds % 60}s"
+        }
+    }
+}

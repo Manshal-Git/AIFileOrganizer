@@ -22,6 +22,8 @@ kotlin {
 
             implementation(libs.koog.agents)
             implementation(libs.kotlinx.serialization.core)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlin.logging)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
@@ -35,6 +37,8 @@ kotlin {
         }
         jvmTest.dependencies {
             implementation(libs.kotlin.testJunit)
+            // So a failing test's logged context is visible instead of being dropped by SLF4J.
+            runtimeOnly(libs.slf4j.simple)
             // Skiko native runtime — needed by the off-screen composition render tests,
             // which draw through Skia without opening a window.
             implementation(compose.desktop.currentOs)

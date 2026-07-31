@@ -127,6 +127,16 @@ internal object AppIcons {
         materialIcon("Bolt", "M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z")
     }
 
+    /** Stands for the model's thinking/reasoning capability. */
+    val Lightbulb by lazy {
+        materialIcon(
+            "Lightbulb",
+            "M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 " +
+                "4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 " +
+                "0-3.86-3.14-7-7-7z",
+        )
+    }
+
     val TrendingUp by lazy {
         materialIcon("TrendingUp", "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z")
     }

@@ -45,7 +45,9 @@ import com.manshal79.aifileorganizer.presentation.organizer.components.FileListS
 import com.manshal79.aifileorganizer.presentation.organizer.components.FolderToolbar
 import com.manshal79.aifileorganizer.presentation.organizer.components.ModelPickerDialog
 import com.manshal79.aifileorganizer.presentation.organizer.components.ModelSelectorChip
+import com.manshal79.aifileorganizer.presentation.organizer.components.ThinkingTogglePill
 import com.manshal79.aifileorganizer.presentation.organizer.components.OllamaUnavailableBanner
+import com.manshal79.aifileorganizer.presentation.organizer.components.SelectModelBanner
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatCardsRow
 import com.manshal79.aifileorganizer.presentation.organizer.components.StatusToast
 import com.manshal79.aifileorganizer.presentation.organizer.components.TokenUsageBar
@@ -149,6 +151,11 @@ private fun MainContent(
                 onRetryClick = { onAction(OrganizerAction.OnRescanClick) },
                 onDismiss = { onAction(OrganizerAction.OnDismissError) },
             )
+        } else if (state.modelSelectionRequired) {
+            SelectModelBanner(
+                onChooseModelClick = onOpenModelPicker,
+                onDismiss = { onAction(OrganizerAction.OnDismissError) },
+            )
         }
 
         HeaderZone(
@@ -157,6 +164,9 @@ private fun MainContent(
             selectedModel = state.selectedModel,
             isLoadingModels = state.isLoadingModels,
             onOpenModelPicker = onOpenModelPicker,
+            thinkingSupported = state.thinkingSupported,
+            thinkingEnabled = state.thinkingEnabled,
+            onToggleThinking = { onAction(OrganizerAction.OnToggleThinking) },
         )
 
         state.folderPath?.let {
@@ -188,10 +198,12 @@ private fun MainContent(
         )
 
         if (state.folderPath != null) {
-            if (state.llmRequestCount > 0) {
+            if (state.llmRequestCount > 0 || state.cacheHitCount > 0) {
                 TokenUsageBar(
                     usage = state.tokenUsage,
                     requestCount = state.llmRequestCount,
+                    totalDurationMillis = state.totalDurationMillis,
+                    cacheHitCount = state.cacheHitCount,
                     modifier = Modifier.padding(
                         start = AppDimens.ContainerPadding,
                         end = AppDimens.ContainerPadding,
@@ -223,6 +235,9 @@ private fun HeaderZone(
     selectedModel: OllamaModelUi?,
     isLoadingModels: Boolean,
     onOpenModelPicker: () -> Unit,
+    thinkingSupported: Boolean,
+    thinkingEnabled: Boolean,
+    onToggleThinking: () -> Unit,
 ) {
     Column {
         Row(
@@ -250,6 +265,11 @@ private fun HeaderZone(
                     isLoading = isLoadingModels,
                     onClick = onOpenModelPicker,
                 )
+                // Only meaningful for a thinking-capable model; hidden otherwise so the header
+                // never offers a switch that would change nothing.
+                if (thinkingSupported) {
+                    ThinkingTogglePill(checked = thinkingEnabled, onToggle = onToggleThinking)
+                }
                 AutoApprovePill(checked = autoApprove, onToggle = onToggleAutoApprove)
             }
         }
@@ -417,6 +437,7 @@ private val previewState = OrganizerState(
     filesToProcess = 8,
     tokenUsage = TokenUsage(inputTokens = 12_480, outputTokens = 342),
     llmRequestCount = 6,
+    totalDurationMillis = 18_400,
 )
 
 @Preview

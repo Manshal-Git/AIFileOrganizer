@@ -55,7 +55,27 @@ class ModelPickerDialogRenderTest {
         renderDialog(models = sampleModels, selectedModelId = sampleModels.last().id)
     }
 
+    @Test
+    fun `renders a thinking-capable model`() {
+        renderDialog(models = sampleModels, selectedModelId = thinkingModel.id)
+    }
+
     private companion object {
+        val thinkingModel = OllamaModelUi(
+            id = "qwen3:8b",
+            displayName = "qwen3:8b",
+            family = "qwen3",
+            parameterLabel = "8.2B params",
+            sizeLabel = "5.2 GB",
+            contextLengthLabel = "40,960 tokens",
+            quantizationLevel = "Q4_K_M",
+            supportsVision = false,
+            supportsTools = true,
+            supportsThinking = true,
+            supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE),
+            isRecommended = false,
+        )
+
         val sampleModels = listOf(
             OllamaModelUi(
                 id = "gemma3:4b",
@@ -67,9 +87,11 @@ class ModelPickerDialogRenderTest {
                 quantizationLevel = "Q4_K_M",
                 supportsVision = true,
                 supportsTools = true,
+                supportsThinking = false,
                 supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE, FileType.IMAGE),
                 isRecommended = true,
             ),
+            thinkingModel,
             OllamaModelUi(
                 id = "llama3.2:1b",
                 displayName = "llama3.2:1b",
@@ -80,6 +102,7 @@ class ModelPickerDialogRenderTest {
                 quantizationLevel = "Q8_0",
                 supportsVision = false,
                 supportsTools = true,
+                supportsThinking = false,
                 supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE),
                 isRecommended = false,
             ),

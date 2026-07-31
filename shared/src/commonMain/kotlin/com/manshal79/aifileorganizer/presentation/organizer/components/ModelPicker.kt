@@ -317,6 +317,8 @@ private fun ModelOptionCard(
             CapabilityDot(supported = model.supportsVision, icon = AppIcons.Image)
             Spacer(Modifier.width(6.dp))
             CapabilityDot(supported = model.supportsTools, icon = AppIcons.Bolt)
+            Spacer(Modifier.width(6.dp))
+            CapabilityDot(supported = model.supportsThinking, icon = AppIcons.Lightbulb)
             Spacer(Modifier.width(10.dp))
             Icon(
                 imageVector = AppIcons.ChevronRight,
@@ -372,6 +374,28 @@ private fun ModelDetails(model: OllamaModelUi, isSelected: Boolean, onSelect: ()
             label = "Tools",
             supported = model.supportsTools,
         )
+        CapabilityRow(
+            label = "Thinking (reasons before answering)",
+            supported = model.supportsThinking,
+        )
+
+        if (model.supportsThinking) {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = AppIcons.Lightbulb,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Turn thinking on or off from the header once this model is selected.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
         Spacer(Modifier.height(16.dp))
         Text(
@@ -565,8 +589,23 @@ private val previewModels = listOf(
         quantizationLevel = "Q4_K_M",
         supportsVision = true,
         supportsTools = true,
+        supportsThinking = false,
         supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE, FileType.IMAGE),
         isRecommended = true,
+    ),
+    OllamaModelUi(
+        id = "qwen3:8b",
+        displayName = "qwen3:8b",
+        family = "qwen3",
+        parameterLabel = "8.2B params",
+        sizeLabel = "5.2 GB",
+        contextLengthLabel = "40,960 tokens",
+        quantizationLevel = "Q4_K_M",
+        supportsVision = false,
+        supportsTools = true,
+        supportsThinking = true,
+        supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE),
+        isRecommended = false,
     ),
     OllamaModelUi(
         id = "llama3.2:1b",
@@ -578,6 +617,7 @@ private val previewModels = listOf(
         quantizationLevel = "Q8_0",
         supportsVision = false,
         supportsTools = true,
+        supportsThinking = false,
         supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE),
         isRecommended = false,
     ),

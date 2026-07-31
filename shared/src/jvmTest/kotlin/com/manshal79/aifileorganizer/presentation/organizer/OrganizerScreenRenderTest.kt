@@ -82,8 +82,34 @@ class OrganizerScreenRenderTest {
     }
 
     @Test
+    fun `renders the select-a-model banner`() {
+        renderScreen(populatedState.copy(modelSelectionRequired = true))
+    }
+
+    @Test
     fun `renders the header with a selected model`() {
-        val model = OllamaModelUi(
+        val model = visionModel
+        renderScreen(populatedState.copy(availableModels = listOf(model), selectedModelId = model.id))
+    }
+
+    @Test
+    fun `renders the header with the thinking toggle on a thinking-capable model`() {
+        renderScreen(
+            populatedState.copy(
+                availableModels = listOf(thinkingModel),
+                selectedModelId = thinkingModel.id,
+                thinkingEnabled = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `renders the header while models are loading`() {
+        renderScreen(populatedState.copy(isLoadingModels = true))
+    }
+
+    private companion object {
+        val visionModel = OllamaModelUi(
             id = "gemma3:4b",
             displayName = "gemma3:4b",
             family = "gemma3",
@@ -93,24 +119,34 @@ class OrganizerScreenRenderTest {
             quantizationLevel = "Q4_K_M",
             supportsVision = true,
             supportsTools = true,
+            supportsThinking = false,
             supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE, FileType.IMAGE),
             isRecommended = true,
         )
-        renderScreen(populatedState.copy(availableModels = listOf(model), selectedModelId = model.id))
-    }
 
-    @Test
-    fun `renders the header while models are loading`() {
-        renderScreen(populatedState.copy(isLoadingModels = true))
-    }
+        val thinkingModel = OllamaModelUi(
+            id = "qwen3:8b",
+            displayName = "qwen3:8b",
+            family = "qwen3",
+            parameterLabel = "8.2B params",
+            sizeLabel = "5.2 GB",
+            contextLengthLabel = "40,960 tokens",
+            quantizationLevel = "Q4_K_M",
+            supportsVision = false,
+            supportsTools = true,
+            supportsThinking = true,
+            supportedFileTypes = listOf(FileType.TEXT_DOCUMENT, FileType.CODE),
+            isRecommended = false,
+        )
 
-    private companion object {
         // One file per status, so a rendering failure in any branch surfaces here.
         val populatedState = OrganizerState(
             folderPath = "/Users/mansh/Documents/screenshots",
             filesToProcess = 6,
             tokenUsage = TokenUsage(inputTokens = 12_480, outputTokens = 342),
             llmRequestCount = 6,
+            totalDurationMillis = 18_400,
+            cacheHitCount = 2,
             files = listOf(
                 FileItemUi("1", "Screenshot_1.png", "/1", FileType.IMAGE, FileItemStatus.Pending),
                 FileItemUi("2", "Screenshot_2.png", "/2", FileType.IMAGE, FileItemStatus.Suggesting),
@@ -121,6 +157,7 @@ class OrganizerScreenRenderTest {
                     FileType.IMAGE,
                     FileItemStatus.Suggested("jigsaw-puzzle-medium", "puzzles"),
                     tokenUsage = TokenUsage(inputTokens = 1_842, outputTokens = 27),
+                    durationMillis = 2_150,
                 ),
                 FileItemUi("4", "notes.md", "/4", FileType.TEXT_DOCUMENT, FileItemStatus.Renaming),
                 FileItemUi(
@@ -130,6 +167,7 @@ class OrganizerScreenRenderTest {
                     FileType.TEXT_DOCUMENT,
                     FileItemStatus.Renamed("meeting-notes.md"),
                     tokenUsage = TokenUsage(inputTokens = 980, outputTokens = 22),
+                    durationMillis = 63_500,
                 ),
                 FileItemUi(
                     "6",
@@ -137,6 +175,7 @@ class OrganizerScreenRenderTest {
                     "/6",
                     FileType.TEXT_DOCUMENT,
                     FileItemStatus.RenameFailed("agenda", "notes", "Target already exists"),
+                    fromCache = true,
                 ),
                 FileItemUi(
                     "7",

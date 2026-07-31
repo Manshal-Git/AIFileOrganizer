@@ -25,6 +25,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import com.manshal79.aifileorganizer.presentation.designsystem.AppDimens
 import com.manshal79.aifileorganizer.presentation.designsystem.AppIcons
 
@@ -39,51 +41,103 @@ internal fun OllamaUnavailableBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    AlertBanner(
+        icon = AppIcons.ErrorCircle,
+        title = "Ollama isn't running",
+        message = "Can't reach it at localhost:11434. Start it with `ollama serve`, then retry.",
+        actionLabel = "Retry",
+        actionIcon = AppIcons.Refresh,
+        onAction = onRetryClick,
+        onDismiss = onDismiss,
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Shown once a scan finds files it could suggest names for, but no model has been picked yet.
+ * No model is ever auto-selected (loading a heavy one onto the user's machine without asking
+ * would be a bad surprise), so this nudges the user to the picker instead of silently stalling.
+ */
+@Composable
+internal fun SelectModelBanner(
+    onChooseModelClick: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AlertBanner(
+        icon = AppIcons.AutoAwesome,
+        title = "Choose a model to continue",
+        message = "Ollama is running, but no model is selected yet. Pick one to start naming files.",
+        actionLabel = "Choose model",
+        actionIcon = AppIcons.AutoAwesome,
+        onAction = onChooseModelClick,
+        onDismiss = onDismiss,
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun AlertBanner(
+    icon: ImageVector,
+    title: String,
+    message: String,
+    actionLabel: String,
+    actionIcon: ImageVector,
+    onAction: () -> Unit,
+    onDismiss: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.errorContainer)
+            .background(containerColor)
             .padding(horizontal = AppDimens.ContainerPadding, vertical = 14.dp)
             .semantics { liveRegion = LiveRegionMode.Assertive },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = AppIcons.ErrorCircle,
+            imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onErrorContainer,
+            tint = contentColor,
             modifier = Modifier.size(26.dp),
         )
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Ollama isn't running",
+                text = title,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = contentColor,
             )
             Text(
-                text = "Can't reach it at localhost:11434. Start it with `ollama serve`, then retry.",
+                text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = contentColor,
             )
         }
         Spacer(Modifier.width(16.dp))
         Button(
-            onClick = onRetryClick,
+            onClick = onAction,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.onErrorContainer,
-                contentColor = MaterialTheme.colorScheme.errorContainer,
+                containerColor = contentColor,
+                contentColor = containerColor,
             ),
             modifier = Modifier
                 .heightIn(min = AppDimens.MinTouchTarget)
                 .pointerHoverIcon(PointerIcon.Hand),
         ) {
             Icon(
-                imageVector = AppIcons.Refresh,
+                imageVector = actionIcon,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(8.dp))
-            Text("Retry", style = MaterialTheme.typography.labelLarge)
+            Text(actionLabel, style = MaterialTheme.typography.labelLarge)
         }
         IconButton(
             onClick = onDismiss,
@@ -94,7 +148,7 @@ internal fun OllamaUnavailableBanner(
             Icon(
                 imageVector = AppIcons.Close,
                 contentDescription = "Dismiss notification",
-                tint = MaterialTheme.colorScheme.onErrorContainer,
+                tint = contentColor,
                 modifier = Modifier.size(18.dp),
             )
         }

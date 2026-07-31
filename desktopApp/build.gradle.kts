@@ -16,6 +16,10 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.koin.compose.viewmodel)
     implementation(libs.androidx.lifecycle.runtimeCompose)
+
+    // kotlin-logging (ours) and Koog both log through SLF4J; without a provider on the runtime
+    // classpath every line is silently dropped ("No SLF4J providers were found").
+    runtimeOnly(libs.slf4j.simple)
 }
 
 compose.desktop {

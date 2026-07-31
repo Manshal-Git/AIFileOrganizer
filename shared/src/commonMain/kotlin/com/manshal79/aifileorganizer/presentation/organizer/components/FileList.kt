@@ -349,7 +349,7 @@ private fun FileRow(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(2.dp))
-                FileStatusLine(file.status, file.name, file.tokenUsage)
+                FileStatusLine(file.status, file.name, file.tokenUsage, file.durationMillis, file.fromCache)
             }
             Spacer(Modifier.width(16.dp))
             RowActions(status = file.status, onApply = onApply)
@@ -381,7 +381,7 @@ private fun FileCard(
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(4.dp))
-        FileStatusLine(file.status, file.name, file.tokenUsage)
+        FileStatusLine(file.status, file.name, file.tokenUsage, file.durationMillis, file.fromCache)
         Spacer(Modifier.height(10.dp))
         RowActions(status = file.status, onApply = onApply, fillWidth = true)
     }
@@ -456,6 +456,8 @@ private fun FileStatusLine(
     status: FileItemStatus,
     originalName: String,
     tokenUsage: TokenUsage?,
+    durationMillis: Long?,
+    fromCache: Boolean,
 ) {
     when (status) {
         FileItemStatus.Pending -> StatusText(
@@ -469,6 +471,8 @@ private fun FileStatusLine(
             suggestedName = status.suggestedName.withExtensionOf(originalName),
             category = status.category,
             tokenUsage = tokenUsage,
+            durationMillis = durationMillis,
+            fromCache = fromCache,
         )
 
         FileItemStatus.Renaming -> ProgressStatus("Renaming…")
@@ -494,6 +498,14 @@ private fun FileStatusLine(
                 Spacer(Modifier.width(8.dp))
                 TokenChip(tokenUsage)
             }
+            if (durationMillis != null) {
+                Spacer(Modifier.width(8.dp))
+                DurationChip(durationMillis)
+            }
+            if (fromCache) {
+                Spacer(Modifier.width(8.dp))
+                CachedChip()
+            }
         }
 
         is FileItemStatus.RenameFailed -> Column {
@@ -501,6 +513,8 @@ private fun FileStatusLine(
                 suggestedName = status.suggestedName.withExtensionOf(originalName),
                 category = status.category,
                 tokenUsage = tokenUsage,
+                durationMillis = durationMillis,
+                fromCache = fromCache,
             )
             ErrorStatus(status.message)
         }
@@ -513,7 +527,9 @@ private fun FileStatusLine(
 private fun SuggestedNameLine(
     suggestedName: String,
     category: String,
-    tokenUsage: TokenUsage?
+    tokenUsage: TokenUsage?,
+    durationMillis: Long?,
+    fromCache: Boolean,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
@@ -539,6 +555,33 @@ private fun SuggestedNameLine(
             Spacer(Modifier.width(8.dp))
             TokenChip(tokenUsage)
         }
+        if (durationMillis != null) {
+            Spacer(Modifier.width(8.dp))
+            DurationChip(durationMillis)
+        }
+        if (fromCache) {
+            Spacer(Modifier.width(8.dp))
+            CachedChip()
+        }
+    }
+}
+
+/** Marks a suggestion that was reused from the cache instead of costing a fresh LLM call. */
+@Composable
+private fun CachedChip() {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .semantics { contentDescription = "reused from cache, file unchanged since last scan" }
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = "Cached",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+        )
     }
 }
 
@@ -576,6 +619,25 @@ private fun TokenChip(usage: TokenUsage) {
                 maxLines = 1,
             )
         }
+    }
+}
+
+/** How long this one file's suggestion request took, next to its [TokenChip]. */
+@Composable
+private fun DurationChip(durationMillis: Long) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .semantics { contentDescription = "took ${durationMillis.formatDuration()}" }
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = durationMillis.formatDuration(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 

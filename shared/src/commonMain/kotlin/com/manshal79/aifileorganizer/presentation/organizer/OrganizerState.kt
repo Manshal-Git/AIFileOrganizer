@@ -14,15 +14,32 @@ data class OrganizerState(
     val filesToProcess: Int = 0,
     val tokenUsage: TokenUsage = TokenUsage.Zero,
     val llmRequestCount: Int = 0,
+    val totalDurationMillis: Long = 0,
+    /** Suggestions reused from the cache instead of asking the model again — pure savings. */
+    val cacheHitCount: Int = 0,
     val isScanning: Boolean = false,
     val error: UiText? = null,
     val ollamaUnavailable: Boolean = false,
+    val modelSelectionRequired: Boolean = false,
     val availableModels: List<OllamaModelUi> = emptyList(),
     val selectedModelId: String? = null,
     val isLoadingModels: Boolean = false,
+    /**
+     * Off by default: naming a file is a short classification job, and reasoning traces cost
+     * output tokens and seconds per file. Only has an effect on a thinking-capable model.
+     */
+    val thinkingEnabled: Boolean = false,
 ) {
     val selectedModel: OllamaModelUi?
         get() = availableModels.find { it.id == selectedModelId }
+
+    /** Only a model that reports the capability may be asked to think — Ollama rejects the rest. */
+    val thinkingSupported: Boolean
+        get() = selectedModel?.supportsThinking == true
+
+    /** What actually goes on the wire: true/false for capable models, null for the others. */
+    val thinkingRequest: Boolean?
+        get() = thinkingEnabled.takeIf { thinkingSupported }
 
     val hasApplicableSuggestions: Boolean
         get() = files.any { it.status is FileItemStatus.Suggested || it.status is FileItemStatus.RenameFailed }
